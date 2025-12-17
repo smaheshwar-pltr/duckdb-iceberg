@@ -239,8 +239,6 @@ static rest_api_objects::TableRequirement CreateAssertRefSnapshotIdRequirement(I
 	return req;
 }
 
-//! Create a requirement that asserts the "main" ref has no snapshot (null snapshot-id)
-//! This is used when committing to a newly created table that has no snapshots yet
 static rest_api_objects::TableRequirement CreateAssertNoSnapshotRequirement() {
 	rest_api_objects::TableRequirement req;
 	req.has_assert_ref_snapshot_id = true;
@@ -319,15 +317,15 @@ TableTransactionInfo IRCTransaction::GetTransactionRequest(ClientContext &contex
 			auto snapshot_id = last_alter.get().snapshot.snapshot_id;
 			auto set_snapshot_ref_update = CreateSetSnapshotRefUpdate(snapshot_id);
 			commit_state.table_change.updates.push_back(std::move(set_snapshot_ref_update));
-		}
+		} 
 
 		if (current_snapshot) {
 			//! If any changes were made to the state of the table, we should assert that our parent snapshot has
 			//! not changed. We don't want to change the table location if someone has added a snapshot
 			commit_state.table_change.requirements.push_back(CreateAssertRefSnapshotIdRequirement(*current_snapshot));
 		} else if (!info.has_assert_create) {
-			//! If the table has no snapshot yet (but wasn't just created in this transaction),
-			//! we need to assert that no snapshot has been added by another transaction
+			//! If the table had no snapshots and isn't created by this transaction, we should assert that no snapshot
+			//! has been added in the meantime
 			commit_state.table_change.requirements.push_back(CreateAssertNoSnapshotRequirement());
 		}
 
